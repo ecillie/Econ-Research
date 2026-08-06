@@ -7,10 +7,80 @@ Statistics (BTS) data. It contains two related pipelines:
    carrier (ULCC) exits for staggered difference-in-differences analysis.
 2. `identify_airline_route_exits.py` identifies monthly nonstop route exits by
    any marketing or operating carrier and creates readable summary reports.
+3. `collect_airline_business_model_data.py` and
+   `score_airline_business_models.py` recreate the six-index airline
+   business-model spectrum developed by Lohmann and Koo (2013).
 
-Both commands are lightweight entry points. The implementation lives in the
-modular `airline_research` package, with separate files for data loading,
-analysis, downloads, configuration, and reporting.
+The commands are lightweight entry points. Their implementations live under
+`src`, with separate files for data loading, analysis, downloads,
+configuration, scoring, and reporting.
+
+## Airline business-model spectrum
+
+This pipeline translates 20 airline product and organizational measures into
+six indices (revenue, connectivity, convenience, comfort, aircraft, and labor)
+and an overall score. As in the paper, zero is the LCC end of the spectrum and
+one is the full-service-network-carrier (FSNC) end.
+
+The scorer uses the paper's legacy Excel `PERCENTRANK` method across all
+carrier-year observations for each measure. Measures where a larger value is
+LCC-like (for example, fleet uniformity and aircraft utilization) are reversed.
+Measures are averaged within each index, and the six indices receive equal
+weight in the overall score.
+
+Punctuality is attributed to the operating carrier by default, consistent with
+the T-100 carrier basis. Use `--on-time-carrier-basis marketing` when the
+research design instead calls for brand-level attribution.
+
+### Collect the missing public inputs
+
+The repository already contains T-100, DB1B, and limited marketing-carrier
+files. The limited on-time files do not contain the delay fields required for
+the convenience index. To download complete on-time files plus the Form 41
+financial, employee, and fleet schedules for 2021-2025:
+
+```bash
+python3 collect_airline_business_model_data.py \
+  --start-year 2021 \
+  --end-year 2025 \
+  --datasets on_time p12 p6 p10 b43
+```
+
+Add `t100` or `db1b` to `--datasets` when those inputs are missing. DB1B files
+are very large; download only the years needed for the scoring window.
+Existing ZIPs are reused only when their required columns pass validation.
+
+### Build and score the carrier panel
+
+```bash
+python3 score_airline_business_models.py \
+  --start-year 2021 \
+  --end-year 2025 \
+  --carriers AA AS B6 DL F9 G4 HA NK OO UA WN
+```
+
+The first run writes
+`output/business_model_spectrum/airport_cbd_distance_template.csv`. Enter the
+airport-to-CBD distances in its `distance_to_cbd_miles` column, save the result
+as `data/manual/airport_cbd_distances.csv`, and rerun the scorer. This manual
+step mirrors the source paper, which obtained this measure outside BTS.
+
+Use `--strict` when the overall score should be blank unless every one of the
+20 measures is available. Without `--strict`, coverage-aware partial scores are
+retained and explicitly labeled `partial_*`.
+
+The main outputs are:
+
+- `carrier_year_raw_metrics.csv` - the auditable inputs to normalization;
+- `carrier_year_metric_scores.csv` - every raw value and percentile rank;
+- `carrier_year_index_scores.csv` - annual six-index scores and coverage;
+- `carrier_spectrum_scores.csv` - carrier averages over the selected years;
+- `spectrum_summary.csv` - compact final ranking;
+- `metric_coverage.csv`, `metric_definitions.csv`, and `diagnostics.json` -
+  methodology and completeness checks.
+
+See `BUSINESS_MODEL_SPECTRUM.md` for the full source-to-measure mapping and
+important comparability notes.
 
 ## Setup
 
@@ -95,6 +165,29 @@ The analysis panel retains never-treated and not-yet-treated markets.
 `treatment_cohort` records the first qualifying ULCC exit in each market, while
 `relative_quarter` measures event time around that exit.
 
+### Build the airport-location table
+
+Create an airport dimension for every origin and destination found in the T-100
+and DB1B inputs:
+
+```bash
+python3 build_airport_locations.py
+```
+
+The command downloads and caches the official BTS Master Coordinate table at
+`data/reference/bts_master_coordinate.zip`, then writes:
+
+- `output/airport_locations.csv` — one row per stable BTS AirportID, including
+  latitude/longitude, airport and city-market names and IDs, state/country, UTC
+  offset, closure status, source coverage, and match quality;
+- `output/airport_locations_diagnostics.json` — input and match-coverage checks.
+
+The join uses BTS AirportID whenever it is present. Airport code is a fallback
+only, because three-character airport codes can change or be reused. Use
+`--input` to scan a different set of BTS files, `--refresh-master` to fetch a
+fresh coordinate table, or `--strict` to fail when any airport lacks valid
+coordinates.
+
 ## Monthly exits by any airline
 
 The monthly pipeline identifies carriers that stop serving an exact nonstop
@@ -175,10 +268,20 @@ archives that clearly fall outside the requested date range are skipped.
 
 ```text
 .
+├── build_airport_locations.py
 ├── expand_ulcc_dataset.py
 ├── identify_airline_route_exits.py
+├── collect_airline_business_model_data.py
+├── score_airline_business_models.py
+├── BUSINESS_MODEL_SPECTRUM.md
 ├── requirements.txt
 └── src/
+    ├── business_model/
+    │   ├── cli.py
+    │   ├── config.py
+    │   ├── data.py
+    │   ├── download.py
+    │   └── scoring.py
     ├── bts.py
     ├── ulcc/
     │   ├── analysis.py
