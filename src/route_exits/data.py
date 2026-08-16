@@ -10,7 +10,7 @@ from typing import BinaryIO, Iterable
 import numpy as np
 import pandas as pd
 
-from airline_research.bts import (
+from src.bts import (
     canonical_airport_pair,
     clean_code,
     discover_files,

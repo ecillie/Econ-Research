@@ -8,17 +8,17 @@ import sys
 import requests
 
 # Re-export the former script API so existing notebooks keep working.
-from airline_research.bts import (
+from src.bts import (
     SUPPORTED_SUFFIXES,
     read_table_chunks,
     webform_state,
 )
-from airline_research.ulcc.analysis import *  # noqa: F401,F403
-from airline_research.ulcc.cli import build_parser, main, parse_args
-from airline_research.ulcc.config import *  # noqa: F401,F403
-from airline_research.ulcc.data import *  # noqa: F401,F403
-from airline_research.ulcc.download import *  # noqa: F401,F403
-from airline_research.ulcc.reporting import *  # noqa: F401,F403
+from src.ulcc.analysis import *  # noqa: F401,F403
+from src.ulcc.cli import build_parser, main, parse_args
+from src.ulcc.config import *  # noqa: F401,F403
+from src.ulcc.data import *  # noqa: F401,F403
+from src.ulcc.download import *  # noqa: F401,F403
+from src.ulcc.reporting import *  # noqa: F401,F403
 
 
 def read_one(path, chunksize=250_000):

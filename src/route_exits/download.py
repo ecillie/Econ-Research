@@ -11,7 +11,7 @@ from pathlib import Path
 import pandas as pd
 import requests
 
-from airline_research.bts import (
+from src.bts import (
     discover_files,
     stream_response_to_zip,
     valid_zip,

@@ -9,7 +9,7 @@ from typing import Iterable, Sequence
 import numpy as np
 import pandas as pd
 
-from airline_research.bts import (
+from src.bts import (
     canonical_airport_pair,
     discover_files,
     normalize_columns,

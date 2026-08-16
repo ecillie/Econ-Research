@@ -127,6 +127,32 @@ def _validate_args(args: argparse.Namespace) -> None:
             raise ValueError("--end-month must not precede --start-month.")
 
 
+def run_analysis(argv: list[str] | None = None):
+    args = parse_args(argv)
+    _validate_args(args)
+
+    operator_detail = None
+
+    if args.carrier_level == "marketing":
+        if args.download_marketing_data:
+            ensure_marketing_data(args)
+
+        monthly, operator_detail, rows_read = load_marketing_monthly_routes(args)
+
+    else:
+        monthly, rows_read = load_monthly_routes(args)
+
+    events = identify_exit_episodes(
+        monthly,
+        min_absence_months=args.min_absence_months,
+        min_active_months_before_exit=args.min_active_months_before_exit,
+        min_performed_flights_before_exit=args.min_performed_flights_before_exit,
+        require_competing_airline_at_exit=args.require_competing_airline_at_exit,
+        operator_detail=operator_detail,
+    )
+
+    return events
+
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     _validate_args(args)
